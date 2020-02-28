@@ -45,8 +45,8 @@ import (
 func main() {
     db, err := kvbase.NewBadgerDB("data")
     if err != nil {
-		log.Fatal(err)
-	}
+        log.Fatal(err)
+    }
 }
 ```
 
