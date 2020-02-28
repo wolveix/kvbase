@@ -62,7 +62,7 @@ if err != nil {
     log.Fatal(err)
 }
 
-fmt.Print(counter) # This will output 1.
+fmt.Print(counter) //This will output 1.
 ```
 
 ### Creating an entry
@@ -123,7 +123,7 @@ if err := db.Read("users", "JohnSmith01", &user); err != nil {
     log.Fatal(err)
 }
 
-fmt.Print(user.Password) # This will output Password123
+fmt.Print(user.Password) //This will output Password123
 ```
 
 ### Updating an entry
