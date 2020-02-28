@@ -56,7 +56,7 @@ func main() {
 
 The `Count()` function expects a bucket (as a `string`),:
 
-```
+```go
 counter, err := db.Count("users")
 if err != nil {
     log.Fatal(err)
@@ -69,7 +69,7 @@ fmt.Print(counter) # This will output 1.
 
 The `Create()` function expects a bucket (as a `string`), a key (as a `string`) and a struct containing your data (as an `interface{}`):
 
-```
+```go
 type User struct {
 	Password string
 	Username string
@@ -90,7 +90,7 @@ If the key already exists, this will **fail**.
 
 The `Delete()` function expects a bucket (as a `string`), a key (as a `string`):
 
-```
+```go
 if err := db.Delete("users", "JohnSmith01"); err != nil {
     log.Fatal(err)
 }
@@ -100,7 +100,7 @@ if err := db.Delete("users", "JohnSmith01"); err != nil {
 
 The `Get()` function expects a bucket (as a `string`), and a struct to unmarshal your data into (as an `interface{}`):
 
-```
+```go
 results, err := db.Get("users", User{})
 if err != nil {
     log.Fatal(err)
@@ -116,7 +116,7 @@ fmt.Print(string(s))
 
 The `Read()` function expects a bucket (as a `string`), a key (as a `string`) and a struct to unmarshal your data into (as an `interface{}`):
 
-```
+```go
 user := User{}
 
 if err := db.Read("users", "JohnSmith01", &user); err != nil {
@@ -130,7 +130,7 @@ fmt.Print(user.Password) # This will output Password123
 
 The `Update()` function expects a bucket (as a `string`), a key (as a `string`) and a struct containing your data (as an `interface{}`):
 
-```
+```go
 user := User{
     "Password456",
     "JohnSmith123",
