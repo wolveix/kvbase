@@ -50,6 +50,14 @@ func main() {
 }
 ```
 
+This function expects a source to be specified (the path where you want the database to be created at).
+E.g:
+
+```
+kvbase.NewBadgerDB("subdirectory/myBadgerDBDatabase") => subdirectory/myBadgerDBDatabase/dbFilesEtc... 
+kvbase.NewBoltDB("kvstore/mydb") => kvstore/mydb.db (Note bolt creates a file)
+```
+
 <hr>
 
 ### Counting entries within a bucket
