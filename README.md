@@ -50,13 +50,7 @@ func main() {
 }
 ```
 
-This function expects a source to be specified (the path where you want the database to be created at).
-E.g:
-
-```
-kvbase.NewBadgerDB("subdirectory/myBadgerDBDatabase") => subdirectory/myBadgerDBDatabase/dbFilesEtc... 
-kvbase.NewBoltDB("kvstore/mydb") => kvstore/mydb.db (Note bolt creates a file)
-```
+These functions expect a source to be specified. Some drivers utilize a file, others utilize a folder.
 
 <hr>
 
