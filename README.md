@@ -50,6 +50,8 @@ func main() {
 }
 ```
 
+These functions expect a source to be specified. Some drivers utilize a file, others utilize a folder.
+
 <hr>
 
 ### Counting entries within a bucket
