@@ -1,4 +1,4 @@
-# kvbase
+# kvbase ![Go](https://github.com/Wolveix/kvbase/workflows/Go/badge.svg)
 A simple abstraction layer for key value stores.
 
 Currently supported stores:
