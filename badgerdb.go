@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// BadgerBackend acts as a wrapper around a Backend interface
 type BadgerBackend struct {
 	Backend
 	Connection *badger.DB
@@ -14,6 +15,7 @@ type BadgerBackend struct {
 	Source     string
 }
 
+// NewBadgerDB initialises a new database using the BadgerDB driver
 func NewBadgerDB(source string, memory bool) (Backend, error) {
 	if source == "" {
 		source = "data"
@@ -38,6 +40,7 @@ func NewBadgerDB(source string, memory bool) (Backend, error) {
 	return &database, nil
 }
 
+// Count returns the total number of records inside of the provided bucket
 func (database *BadgerBackend) Count(bucket string) (int, error) {
 	db := database.Connection
 	counter := 0
@@ -56,6 +59,7 @@ func (database *BadgerBackend) Count(bucket string) (int, error) {
 	})
 }
 
+// Create inserts a record into the backend
 func (database *BadgerBackend) Create(bucket string, key string, model interface{}) error {
 	if _, err := database.view(bucket, key); err == nil {
 		return errors.New("key already exists")
@@ -64,6 +68,7 @@ func (database *BadgerBackend) Create(bucket string, key string, model interface
 	return database.write(bucket, key, model)
 }
 
+// Delete removes a record from the backend
 func (database *BadgerBackend) Delete(bucket string, key string) error {
 	db := database.Connection
 
@@ -76,6 +81,7 @@ func (database *BadgerBackend) Delete(bucket string, key string) error {
 	})
 }
 
+// Get returns all records inside of the provided bucket
 func (database *BadgerBackend) Get(bucket string, model interface{}) (*map[string]interface{}, error) {
 	db := database.Connection
 	results := make(map[string]interface{})
@@ -106,6 +112,7 @@ func (database *BadgerBackend) Get(bucket string, model interface{}) (*map[strin
 	})
 }
 
+// Read returns a single struct from the provided bucket, using the provided key
 func (database *BadgerBackend) Read(bucket string, key string, model interface{}) error {
 	data, err := database.view(bucket, key)
 	if err != nil {
@@ -115,6 +122,7 @@ func (database *BadgerBackend) Read(bucket string, key string, model interface{}
 	return json.Unmarshal(data, &model)
 }
 
+// Update modifies an existing record from the backend, inside of the provided bucket, using the provided key
 func (database *BadgerBackend) Update(bucket string, key string, model interface{}) error {
 	if _, err := database.view(bucket, key); err != nil {
 		return err

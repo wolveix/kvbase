@@ -7,12 +7,14 @@ import (
 	"time"
 )
 
+// BoltBackend acts as a wrapper around a Backend interface
 type BoltBackend struct {
 	Backend
 	Connection *bolt.DB
 	Source     string
 }
 
+// NewBboltDB initialises a new database using the BadgerDB driver
 func NewBoltDB(source string) (Backend, error) {
 	if source == "" {
 		source = "data.db"
@@ -31,6 +33,7 @@ func NewBoltDB(source string) (Backend, error) {
 	return &database, nil
 }
 
+// Count returns the total number of records inside of the provided bucket
 func (database *BoltBackend) Count(bucket string) (int, error) {
 	db := database.Connection
 	counter := 0
@@ -48,6 +51,7 @@ func (database *BoltBackend) Count(bucket string) (int, error) {
 	})
 }
 
+// Create inserts a record into the backend
 func (database *BoltBackend) Create(bucket string, key string, model interface{}) error {
 	if _, err := database.view(bucket, key); err == nil {
 		return errors.New("key already exists")
@@ -56,6 +60,7 @@ func (database *BoltBackend) Create(bucket string, key string, model interface{}
 	return database.write(bucket, key, model)
 }
 
+// Delete removes a record from the backend
 func (database *BoltBackend) Delete(bucket string, key string) error {
 	db := database.Connection
 
@@ -70,6 +75,7 @@ func (database *BoltBackend) Delete(bucket string, key string) error {
 	})
 }
 
+// Get returns all records inside of the provided bucket
 func (database *BoltBackend) Get(bucket string, model interface{}) (*map[string]interface{}, error) {
 	db := database.Connection
 	results := make(map[string]interface{})
@@ -94,6 +100,7 @@ func (database *BoltBackend) Get(bucket string, model interface{}) (*map[string]
 	})
 }
 
+// Read returns a single struct from the provided bucket, using the provided key
 func (database *BoltBackend) Read(bucket string, key string, model interface{}) error {
 	data, err := database.view(bucket, key)
 	if err != nil {
@@ -103,6 +110,7 @@ func (database *BoltBackend) Read(bucket string, key string, model interface{}) 
 	return json.Unmarshal(data, &model)
 }
 
+// Update modifies an existing record from the backend, inside of the provided bucket, using the provided key
 func (database *BoltBackend) Update(bucket string, key string, model interface{}) error {
 	if _, err := database.view(bucket, key); err != nil {
 		return err
