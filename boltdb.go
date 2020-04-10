@@ -10,6 +10,7 @@ import (
 type BoltBackend struct {
 	Backend
 	Connection *bolt.DB
+	Source     string
 }
 
 func NewBoltDB(source string) (Backend, error) {
@@ -24,6 +25,7 @@ func NewBoltDB(source string) (Backend, error) {
 
 	database := BoltBackend{
 		Connection: db,
+		Source:     source,
 	}
 
 	return &database, nil
@@ -33,8 +35,7 @@ func (database *BoltBackend) Count(bucket string) (int, error) {
 	db := database.Connection
 	counter := 0
 
-	err := database.checkBucket(bucket)
-	if err != nil {
+	if err := database.checkBucket(bucket); err != nil {
 		return 0, err
 	}
 
@@ -82,8 +83,7 @@ func (database *BoltBackend) Get(bucket string, model interface{}) (*map[string]
 		b := tx.Bucket([]byte(bucket))
 
 		return b.ForEach(func(key, value []byte) error {
-			err := json.Unmarshal(value, &model)
-			if err != nil {
+			if err := json.Unmarshal(value, &model); err != nil {
 				return err
 			}
 
@@ -115,8 +115,7 @@ func (database *BoltBackend) checkBucket(bucket string) error {
 	db := database.Connection
 
 	return db.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte(bucket))
-		if err != nil {
+		if _, err := tx.CreateBucketIfNotExists([]byte(bucket)); err != nil {
 			return err
 		}
 
@@ -128,8 +127,7 @@ func (database *BoltBackend) view(bucket string, key string) ([]byte, error) {
 	db := database.Connection
 	var data []byte
 
-	err := database.checkBucket(bucket)
-	if err != nil {
+	if err := database.checkBucket(bucket); err != nil {
 		return nil, err
 	}
 
@@ -154,8 +152,7 @@ func (database *BoltBackend) write(bucket string, key string, model interface{})
 		return err
 	}
 
-	err = database.checkBucket(bucket)
-	if err != nil {
+	if err = database.checkBucket(bucket); err != nil {
 		return err
 	}
 

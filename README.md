@@ -5,6 +5,7 @@ Currently supported stores:
 - [BadgerDB](https://github.com/dgraph-io/badger)
 - [BoltDB](https://github.com/boltdb/bolt)
 - [BboltDB](https://github.com/etcd-io/bbolt)
+- [Go-Cache](https://github.com/patrickmn/go-cache)
 
 ## Getting Started
 
@@ -31,7 +32,7 @@ All databases are stored within a `Backend` interface, and have the following fu
 - `Read(bucket string, key string, model interface{}) error`
 - `Update(bucket string, key string, model interface{}) error`
 
-To open a database instance, call the package with `New` followed by the type. E.g: `kvbase.NewBadgerDB("data")`:
+To open a database instance, call the package with `New` followed by the type. E.g: `kvbase.NewBadgerDB("data", false)`:
 
 ```go
 package main
@@ -43,14 +44,14 @@ import (
 )
 
 func main() {
-    db, err := kvbase.NewBadgerDB("data")
+    db, err := kvbase.NewBadgerDB("data", false)
     if err != nil {
         log.Fatal(err)
     }
 }
 ```
 
-These functions expect a source to be specified. Some drivers utilize a file, others utilize a folder.
+These functions expect a source to be specified. Some drivers utilize a file, others utilize a folder. Not all backends require the boolean value after the source (this value enables in-memory mode, disabling persistent database storage).
 
 <hr>
 
@@ -145,11 +146,6 @@ if err := db.Update("users", user.Username, &user); err != nil {
 If the key doesn't already exist, this will **fail**.
 
 <hr>
-
-## Notes
-
-- Since BadgerDB doesn't actually support buckets, prefixes are used in their place.
-- While BadgerDB creates a directory for its database, BoltDB and BboltDB create a single file.
 
 ## Credits
 - Creator: [Robert Thomas](https://github.com/Wolveix)

@@ -10,15 +10,19 @@ import (
 type BadgerBackend struct {
 	Backend
 	Connection *badger.DB
+	Memory     bool
+	Source     string
 }
 
-func NewBadgerDB(source string) (Backend, error) {
+func NewBadgerDB(source string, memory bool) (Backend, error) {
 	if source == "" {
 		source = "data"
 	}
 
 	opts := badger.DefaultOptions(source)
 	opts.Logger = nil
+	opts.SyncWrites = true
+	opts.KeepL0InMemory = memory
 
 	db, err := badger.Open(opts)
 	if err != nil {
@@ -27,6 +31,8 @@ func NewBadgerDB(source string) (Backend, error) {
 
 	database := BadgerBackend{
 		Connection: db,
+		Memory:     memory,
+		Source:     source,
 	}
 
 	return &database, nil
@@ -85,8 +91,7 @@ func (database *BadgerBackend) Get(bucket string, model interface{}) (*map[strin
 			if err := item.Value(func(value []byte) error {
 				key := strings.Replace(string(item.Key()), bucket+"_", "", -1)
 
-				err := json.Unmarshal(value, &model)
-				if err != nil {
+				if err := json.Unmarshal(value, &model); err != nil {
 					return err
 				}
 
