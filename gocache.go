@@ -12,11 +12,12 @@ import (
 type GoCacheBackend struct {
 	Backend
 	Connection *cache.Cache
+	Driver string
 	Memory     bool
 	Source     string
 }
 
-// NewGoCache initialises a new database using the BadgerDB driver
+// NewGoCache initialises a new database using the GoCache driver
 func NewGoCache(source string, memory bool) (Backend, error) {
 	if source == "" {
 		source = "data"
@@ -32,6 +33,7 @@ func NewGoCache(source string, memory bool) (Backend, error) {
 
 	database := GoCacheBackend{
 		Connection: db,
+		Driver: 	"gocache",
 		Memory:     memory,
 		Source:     source,
 	}

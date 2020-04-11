@@ -3,7 +3,7 @@ package kvbase
 import (
 	"encoding/json"
 	"errors"
-	"github.com/dgraph-io/badger"
+	"github.com/dgraph-io/badger/v2"
 	"strings"
 )
 
@@ -11,6 +11,7 @@ import (
 type BadgerBackend struct {
 	Backend
 	Connection *badger.DB
+	Driver	   string
 	Memory     bool
 	Source     string
 }
@@ -24,7 +25,12 @@ func NewBadgerDB(source string, memory bool) (Backend, error) {
 	opts := badger.DefaultOptions(source)
 	opts.Logger = nil
 	opts.SyncWrites = true
-	opts.KeepL0InMemory = memory
+
+	if memory {
+		opts.InMemory = true
+		opts.Dir = ""
+		opts.ValueDir = ""
+	}
 
 	db, err := badger.Open(opts)
 	if err != nil {
@@ -33,6 +39,7 @@ func NewBadgerDB(source string, memory bool) (Backend, error) {
 
 	database := BadgerBackend{
 		Connection: db,
+		Driver: 	"badgerdb",
 		Memory:     memory,
 		Source:     source,
 	}

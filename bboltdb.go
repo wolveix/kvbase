@@ -11,10 +11,11 @@ import (
 type BboltBackend struct {
 	Backend
 	Connection *bbolt.DB
+	Driver	   string
 	Source     string
 }
 
-// NewBboltDB initialises a new database using the BadgerDB driver
+// NewBboltDB initialises a new database using the BboltDB driver
 func NewBboltDB(source string) (Backend, error) {
 	if source == "" {
 		source = "data.db"
@@ -27,6 +28,7 @@ func NewBboltDB(source string) (Backend, error) {
 
 	database := BboltBackend{
 		Connection: db,
+		Driver: 	"bboltdb",
 		Source:     source,
 	}
 
