@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/patrickmn/go-cache"
-	"log"
 	"strings"
 	"sync"
 )
@@ -36,7 +35,9 @@ func NewGoCache(source string, memory bool) (Backend, error) {
 		Source:     source,
 	}
 
-	database.save()
+	if err := database.save(); err != nil {
+		return nil, err
+	}
 
 	return &database, nil
 }
@@ -70,7 +71,9 @@ func (database *GoCacheBackend) Create(bucket string, key string, model interfac
 		return err
 	}
 
-	database.save()
+	if err := database.save(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -86,7 +89,9 @@ func (database *GoCacheBackend) Delete(bucket string, key string) error {
 
 	db.Delete(bucket + "_" + key)
 
-	database.save()
+	if err := database.save(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -103,7 +108,9 @@ func (database *GoCacheBackend) Drop(bucket string) error {
 		}
 	}
 
-	database.save()
+	if err := database.save(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -153,17 +160,21 @@ func (database *GoCacheBackend) Update(bucket string, key string, model interfac
 		return err
 	}
 
-	database.save()
+	if err := database.save(); err != nil {
+		return err
+	}
 
 	return nil
 }
 
-func (database *GoCacheBackend) save() {
+func (database *GoCacheBackend) save() error {
 	if !database.Memory {
 		database.Mux.RLock()
 		if err := database.Connection.SaveFile(database.Source); err != nil {
-			log.Fatal(err)
+			return err
 		}
 		database.Mux.RUnlock()
 	}
+
+	return nil
 }
