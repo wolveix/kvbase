@@ -3,17 +3,18 @@ package kvbase
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/patrickmn/go-cache"
+	"log"
 	"strings"
+	"sync"
 )
 
 // GoCacheBackend acts as a wrapper around a Backend interface
 type GoCacheBackend struct {
 	Backend
 	Connection *cache.Cache
-	Driver string
 	Memory     bool
+	Mux        sync.RWMutex
 	Source     string
 }
 
@@ -26,17 +27,16 @@ func NewGoCache(source string, memory bool) (Backend, error) {
 	db := cache.New(cache.NoExpiration, 0)
 
 	if !memory {
-		if err := db.LoadFile(source); err != nil {
-			fmt.Println("Creating new database...")
-		}
+		_ = db.LoadFile(source)
 	}
 
 	database := GoCacheBackend{
 		Connection: db,
-		Driver: 	"gocache",
 		Memory:     memory,
 		Source:     source,
 	}
+
+	database.save()
 
 	return &database, nil
 }
@@ -70,11 +70,7 @@ func (database *GoCacheBackend) Create(bucket string, key string, model interfac
 		return err
 	}
 
-	if !database.Memory {
-		if err := db.SaveFile(database.Source); err != nil {
-			return err
-		}
-	}
+	database.save()
 
 	return nil
 }
@@ -90,11 +86,24 @@ func (database *GoCacheBackend) Delete(bucket string, key string) error {
 
 	db.Delete(bucket + "_" + key)
 
-	if !database.Memory {
-		if err := db.SaveFile(database.Source); err != nil {
-			return err
+	database.save()
+
+	return nil
+}
+
+// Drop deletes a bucket (and all of its contents) from the backend
+func (database *GoCacheBackend) Drop(bucket string) error {
+	db := database.Connection
+
+	data := db.Items()
+
+	for key := range data {
+		if strings.HasPrefix(key, bucket+"_") {
+			db.Delete(key)
 		}
 	}
+
+	database.save()
 
 	return nil
 }
@@ -144,11 +153,17 @@ func (database *GoCacheBackend) Update(bucket string, key string, model interfac
 		return err
 	}
 
-	if !database.Memory {
-		if err := db.SaveFile(database.Source); err != nil {
-			return err
-		}
-	}
+	database.save()
 
 	return nil
+}
+
+func (database *GoCacheBackend) save() {
+	if !database.Memory {
+		database.Mux.RLock()
+		if err := database.Connection.SaveFile(database.Source); err != nil {
+			log.Fatal(err)
+		}
+		database.Mux.RUnlock()
+	}
 }

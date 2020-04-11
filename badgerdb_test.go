@@ -6,39 +6,50 @@ import (
 	"testing"
 )
 
-func BadgerDBInit() (kvbase.Backend, error) {
+func NewBadgerDBDisk() kvbase.Backend {
 	_ = os.RemoveAll("testbadgerdbdata/")
 
-	if database, err := kvbase.NewBadgerDB("testbadgerdbdata", false); err != nil {
-		return nil, err
-	} else {
-		return database, nil
+	database, err := kvbase.NewBadgerDB("testbadgerdbdata", false)
+	if err != nil {
+		panic("Error on database initialisation: " + err.Error())
 	}
+
+	return database
 }
 
-func TestBadgerDBBackend(t *testing.T) {
-	database, err := BadgerDBInit()
+func NewBadgerDBMemory() kvbase.Backend {
+	_ = os.RemoveAll("testbadgerdbdata/")
+
+	database, err := kvbase.NewBadgerDB("testbadgerdbdata", true)
 	if err != nil {
-		t.Fatal("Error on database initialisation:", err)
+		panic("Error on database initialisation: " + err.Error())
 	}
 
-	exampleModel := model{
-		"John Smith",
-	}
+	return database
+}
+
+func TestBadgerDBBackendDisk(t *testing.T) {
+	database := NewBadgerDBDisk()
 
 	if err := database.Create("bucket", "key", &exampleModel); err != nil {
 		t.Fatal("Error on record creation:", err)
 	}
 
-	if _, err = kvbase.NewBadgerDB("testbadgerdbdata", false); err == nil {
-		t.Fatal("Expected error on database initialisation:", err)
+	database, err := kvbase.NewBadgerDB("testbadgerdbdata", false)
+	if err != nil {
+		t.Fatal("Error on database initialisation:", err)
+	}
+
+	if err := database.Read("bucket", "key", &exampleModel); err != nil {
+		t.Fatal("Error on database read:", err)
 	}
 }
 
-func TestBadgerDBBackendMem(t *testing.T) {
-	_ = os.RemoveAll("testbadgerdbdata/")
-	exampleModel := model{
-		"John Smith",
+func TestBadgerDBBackendMemory(t *testing.T) {
+	database := NewBadgerDBMemory()
+
+	if err := database.Create("bucket", "key", &exampleModel); err != nil {
+		t.Fatal("Error on record creation:", err)
 	}
 
 	database, err := kvbase.NewBadgerDB("testbadgerdbdata", true)
@@ -46,70 +57,175 @@ func TestBadgerDBBackendMem(t *testing.T) {
 		t.Fatal("Error on database initialisation:", err)
 	}
 
-	if err := database.Create("bucket", "key", &exampleModel); err != nil {
-		t.Fatal("Error on record creation:", err)
-	}
-
-	database, err = kvbase.NewBadgerDB("testbadgerdbdata", true)
-	if err != nil {
-		t.Fatal("Error on database initialisation:", err)
-	}
-
-	if err = database.Read("bucket", "key", &exampleModel); err == nil {
+	if err := database.Read("bucket", "key", &exampleModel); err == nil {
 		t.Fatal("Error expected for missing key.")
 	}
 }
 
 func TestBadgerDBBackend_Count(t *testing.T) {
-	database, err := BadgerDBInit()
-	if err != nil {
-		t.Fatal("Error on database initialisation:", err)
-	}
+	t.Run("Disk", func(t *testing.T) {
+		database := NewBadgerDBDisk()
+		testCount(t, database)
+	})
 
-	Count(t, database)
+	t.Run("Memory", func(t *testing.T) {
+		database := NewBadgerDBMemory()
+		testCount(t, database)
+	})
 }
 
 func TestBadgerDBBackend_Create(t *testing.T) {
-	database, err := BadgerDBInit()
-	if err != nil {
-		t.Fatal("Error on database initialisation:", err)
-	}
+	t.Run("Disk", func(t *testing.T) {
+		database := NewBadgerDBDisk()
+		testCreate(t, database)
+	})
 
-	Create(t, database)
+	t.Run("Memory", func(t *testing.T) {
+		database := NewBadgerDBMemory()
+		testCreate(t, database)
+	})
 }
 
 func TestBadgerDBBackend_Delete(t *testing.T) {
-	database, err := BadgerDBInit()
-	if err != nil {
-		t.Fatal("Error on database initialisation:", err)
-	}
+	t.Run("Disk", func(t *testing.T) {
+		database := NewBadgerDBDisk()
+		testDelete(t, database)
+	})
 
-	Delete(t, database)
+	t.Run("Memory", func(t *testing.T) {
+		database := NewBadgerDBMemory()
+		testDelete(t, database)
+	})
+}
+
+func TestBadgerDBBackend_Drop(t *testing.T) {
+	t.Run("Disk", func(t *testing.T) {
+		database := NewBadgerDBDisk()
+		testDrop(t, database)
+	})
+
+	t.Run("Memory", func(t *testing.T) {
+		database := NewBadgerDBMemory()
+		testDrop(t, database)
+	})
 }
 
 func TestBadgerDBBackend_Get(t *testing.T) {
-	database, err := BadgerDBInit()
-	if err != nil {
-		t.Fatal("Error on database initialisation:", err)
-	}
+	t.Run("Disk", func(t *testing.T) {
+		database := NewBadgerDBDisk()
+		testGet(t, database)
+	})
 
-	Get(t, database)
+	t.Run("Memory", func(t *testing.T) {
+		database := NewBadgerDBMemory()
+		testGet(t, database)
+	})
 }
 
 func TestBadgerDBBackend_Read(t *testing.T) {
-	database, err := BadgerDBInit()
-	if err != nil {
-		t.Fatal("Error on database initialisation:", err)
-	}
+	t.Run("Disk", func(t *testing.T) {
+		database := NewBadgerDBDisk()
+		testRead(t, database)
+	})
 
-	Read(t, database)
+	t.Run("Memory", func(t *testing.T) {
+		database := NewBadgerDBMemory()
+		testRead(t, database)
+	})
 }
 
 func TestBadgerDBBackend_Update(t *testing.T) {
-	database, err := BadgerDBInit()
-	if err != nil {
-		t.Fatal("Error on database initialisation:", err)
-	}
+	t.Run("Disk", func(t *testing.T) {
+		database := NewBadgerDBDisk()
+		testUpdate(t, database)
+	})
 
-	Update(t, database)
+	t.Run("Memory", func(t *testing.T) {
+		database := NewBadgerDBMemory()
+		testUpdate(t, database)
+	})
+}
+
+func BenchmarkBadgerDBBackend_Count(b *testing.B) {
+	b.Run("Disk", func(b *testing.B) {
+		database := NewBadgerDBDisk()
+		benchmarkCount(b, database)
+	})
+
+	b.Run("Memory", func(b *testing.B) {
+		database := NewBadgerDBMemory()
+		benchmarkCount(b, database)
+	})
+}
+
+func BenchmarkBadgerDBBackend_Create(b *testing.B) {
+	b.Run("Disk", func(b *testing.B) {
+		database := NewBadgerDBDisk()
+		benchmarkCreate(b, database)
+	})
+
+	b.Run("Memory", func(b *testing.B) {
+		database := NewBadgerDBMemory()
+		benchmarkCreate(b, database)
+	})
+}
+
+func BenchmarkBadgerDBBackend_Delete(b *testing.B) {
+	b.Run("Disk", func(b *testing.B) {
+		database := NewBadgerDBDisk()
+		benchmarkDelete(b, database)
+	})
+
+	b.Run("Memory", func(b *testing.B) {
+		database := NewBadgerDBMemory()
+		benchmarkDelete(b, database)
+	})
+}
+
+func BenchmarkBadgerDBBackend_Drop(b *testing.B) {
+	b.Run("Disk", func(b *testing.B) {
+		database := NewBadgerDBDisk()
+		benchmarkDrop(b, database)
+	})
+
+	b.Run("Memory", func(b *testing.B) {
+		database := NewBadgerDBMemory()
+		benchmarkDrop(b, database)
+	})
+}
+
+func BenchmarkBadgerDBBackend_Get(b *testing.B) {
+	b.Run("Disk", func(b *testing.B) {
+		database := NewBadgerDBDisk()
+		benchmarkGet(b, database)
+	})
+
+	b.Run("Memory", func(b *testing.B) {
+		database := NewBadgerDBMemory()
+		benchmarkGet(b, database)
+	})
+}
+
+func BenchmarkBadgerDBBackend_Read(b *testing.B) {
+	b.Run("Disk", func(b *testing.B) {
+		database := NewBadgerDBDisk()
+		benchmarkRead(b, database)
+	})
+
+	b.Run("Memory", func(b *testing.B) {
+		database := NewBadgerDBMemory()
+		benchmarkRead(b, database)
+	})
+}
+
+func BenchmarkBadgerDBBackend_Update(b *testing.B) {
+	b.Run("Disk", func(b *testing.B) {
+		database := NewBadgerDBDisk()
+		benchmarkUpdate(b, database)
+	})
+
+	b.Run("Memory", func(b *testing.B) {
+		database := NewBadgerDBMemory()
+		benchmarkUpdate(b, database)
+	})
 }

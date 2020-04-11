@@ -1,4 +1,4 @@
-# kvbase ![Go](https://github.com/Wolveix/kvbase/workflows/Go/badge.svg) ![Go Report](https://goreportcard.com/badge/github.com/Wolveix/kvbase)
+# kvbase ![Go](https://github.com/Wolveix/kvbase/workflows/Go/badge.svg) [![Go Report Card](https://goreportcard.com/badge/github.com/Wolveix/kvbase)](https://goreportcard.com/report/github.com/Wolveix/kvbase) [![GoDoc](https://godoc.org/github.com/Wolveix/kvbase?status.svg)](https://pkg.go.dev/github.com/Wolveix/kvbase)
 A simple abstraction layer for key value stores.
 
 Currently supported stores:
@@ -28,6 +28,7 @@ All databases are stored within a `Backend` interface, and have the following fu
 - `Count(bucket string) (int, error)`
 - `Create(bucket string, key string, model interface{}) error`
 - `Delete(bucket string, key string) error`
+- `Drop(bucket string) error`
 - `Get(bucket string, model interface{}) (*map[string]interface{}, error)`
 - `Read(bucket string, key string, model interface{}) error`
 - `Update(bucket string, key string, model interface{}) error`
@@ -95,6 +96,16 @@ The `Delete()` function expects a bucket (as a `string`), a key (as a `string`):
 
 ```go
 if err := db.Delete("users", "JohnSmith01"); err != nil {
+    log.Fatal(err)
+}
+```
+
+### Dropping a bucket
+
+The `Drop()` function expects a bucket (as a `string`):
+
+```go
+if err := db.Drop("users"); err != nil {
     log.Fatal(err)
 }
 ```

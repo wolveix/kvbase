@@ -11,7 +11,6 @@ import (
 type BoltBackend struct {
 	Backend
 	Connection *bolt.DB
-	Driver string
 	Source     string
 }
 
@@ -28,7 +27,6 @@ func NewBoltDB(source string) (Backend, error) {
 
 	database := BoltBackend{
 		Connection: db,
-		Driver: 	"boltdb",
 		Source:     source,
 	}
 
@@ -74,6 +72,15 @@ func (database *BoltBackend) Delete(bucket string, key string) error {
 		b := tx.Bucket([]byte(bucket))
 
 		return b.Delete([]byte(key))
+	})
+}
+
+// Drop deletes a bucket (and all of its contents) from the backend
+func (database *BoltBackend) Drop(bucket string) error {
+	db := database.Connection
+
+	return db.Update(func(tx *bolt.Tx) error {
+		return tx.DeleteBucket([]byte(bucket))
 	})
 }
 

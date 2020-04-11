@@ -1,7 +1,9 @@
 package kvbase_test
 
 import (
+	"fmt"
 	"github.com/Wolveix/kvbase"
+	"strconv"
 	"testing"
 )
 
@@ -9,12 +11,11 @@ type model struct {
 	Name string
 }
 
+var exampleModel = model{
+	"John Smith",
+}
 
-func Count(t *testing.T, database kvbase.Backend) {
-	exampleModel := model{
-		"John Smith",
-	}
-
+func testCount(t *testing.T, database kvbase.Backend) {
 	if err := database.Create("bucket", "key", &exampleModel); err != nil {
 		t.Fatal("Error on record creation:", err)
 	}
@@ -29,11 +30,7 @@ func Count(t *testing.T, database kvbase.Backend) {
 	}
 }
 
-func Create(t *testing.T, database kvbase.Backend) {
-	exampleModel := model{
-		"John Smith",
-	}
-
+func testCreate(t *testing.T, database kvbase.Backend) {
 	if err := database.Create("bucket", "key", &exampleModel); err != nil {
 		t.Fatal("Error on record creation:", err)
 	}
@@ -43,11 +40,7 @@ func Create(t *testing.T, database kvbase.Backend) {
 	}
 }
 
-func Delete(t *testing.T, database kvbase.Backend) {
-	exampleModel := model{
-		"John Smith",
-	}
-
+func testDelete(t *testing.T, database kvbase.Backend) {
 	if err := database.Create("bucket", "key", &exampleModel); err != nil {
 		t.Fatal("Error on record creation:", err)
 	}
@@ -61,7 +54,28 @@ func Delete(t *testing.T, database kvbase.Backend) {
 	}
 }
 
-func Get(t *testing.T, database kvbase.Backend) {
+func testDrop(t *testing.T, database kvbase.Backend) {
+	if err := database.Create("bucket", "k0", &exampleModel); err != nil {
+		t.Fatal("Error on record creation:", err)
+	}
+
+	newModel := exampleModel
+	newModel.Name = "Updated John Smith"
+
+	if err := database.Create("bucket", "k1", &newModel); err != nil {
+		t.Fatal("Error on record creation:", err)
+	}
+
+	if err := database.Drop("bucket"); err != nil {
+		t.Fatal("Error on bucket drop:", err)
+	}
+
+	if err := database.Read("bucket", "k0", &model{}); err == nil {
+		t.Fatal("Error expected for missing key.")
+	}
+}
+
+func testGet(t *testing.T, database kvbase.Backend) {
 	kO := model{
 		"John Smith",
 	}
@@ -94,11 +108,7 @@ func Get(t *testing.T, database kvbase.Backend) {
 	}
 }
 
-func Read(t *testing.T, database kvbase.Backend) {
-	exampleModel := model{
-		"John Smith",
-	}
-
+func testRead(t *testing.T, database kvbase.Backend) {
 	if err := database.Create("bucket", "key", &exampleModel); err != nil {
 		t.Fatal("Error on record creation:", err)
 	}
@@ -114,11 +124,7 @@ func Read(t *testing.T, database kvbase.Backend) {
 	}
 }
 
-func Update(t *testing.T, database kvbase.Backend) {
-	exampleModel := model{
-		"John Smith",
-	}
-
+func testUpdate(t *testing.T, database kvbase.Backend) {
 	if err := database.Update("bucket", "key", &exampleModel); err == nil {
 		t.Fatal("Error expected for missing key.")
 	}
@@ -127,9 +133,10 @@ func Update(t *testing.T, database kvbase.Backend) {
 		t.Fatal("Error on record creation:", err)
 	}
 
-	exampleModel.Name = "Updated John Smith"
+	newModel := exampleModel
+	newModel.Name = "Updated John Smith"
 
-	if err := database.Update("bucket", "key", &exampleModel); err != nil {
+	if err := database.Update("bucket", "key", &newModel); err != nil {
 		t.Fatal("Error on record update:", err)
 	}
 
@@ -141,5 +148,108 @@ func Update(t *testing.T, database kvbase.Backend) {
 
 	if emptyModel.Name != "Updated John Smith" {
 		t.Fatal("Expected Updated John Smith for returned struct.Name, got:", emptyModel.Name)
+	}
+}
+
+func benchmarkCount(b *testing.B, database kvbase.Backend) {
+	for i := 0; i < b.N; i++ {
+		if err := database.Create("bucket", strconv.Itoa(i), &exampleModel); err != nil {
+			b.Error("Error on record creation:", err)
+		}
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := database.Count("bucket"); err != nil {
+			b.Error("Error on record creation:", err)
+		}
+	}
+}
+
+func benchmarkCreate(b *testing.B, database kvbase.Backend) {
+	for i := 0; i < b.N; i++ {
+		if err := database.Create("bucket", strconv.Itoa(i), &exampleModel); err != nil {
+			b.Error("Error on record creation:", err)
+		}
+	}
+}
+
+func benchmarkDelete(b *testing.B, database kvbase.Backend) {
+	for i := 0; i < b.N; i++ {
+		if err := database.Create("bucket", strconv.Itoa(i), &exampleModel); err != nil {
+			b.Error("Error on record creation:", err)
+		}
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if err := database.Delete("bucket", strconv.Itoa(i)); err != nil {
+			b.Error("Error on record delete:", err)
+		}
+	}
+}
+
+func benchmarkDrop(b *testing.B, database kvbase.Backend) {
+	for i := 0; i < b.N; i++ {
+		if err := database.Create("bucket"+strconv.Itoa(i), strconv.Itoa(i), &exampleModel); err != nil {
+			b.Error("Error on record creation:", err)
+		}
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if err := database.Drop("bucket" + strconv.Itoa(i)); err != nil {
+			b.Error("Error on bucket drop:", err)
+		}
+	}
+}
+
+func benchmarkGet(b *testing.B, database kvbase.Backend) {
+	for i := 0; i < b.N; i++ {
+		if err := database.Create("bucket", strconv.Itoa(i), &exampleModel); err != nil {
+			b.Error("Error on record creation:", err)
+		}
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		newModel := model{}
+		if _, err := database.Get("bucket", &newModel); err != nil {
+			b.Error("Error on record get:", err)
+		}
+	}
+}
+
+func benchmarkRead(b *testing.B, database kvbase.Backend) {
+	for i := 0; i < b.N; i++ {
+		fmt.Println(i)
+		if err := database.Create("bucket", strconv.Itoa(i), &exampleModel); err != nil {
+			b.Error("Error on record creation:", err)
+		}
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		newModel := model{}
+		if err := database.Read("bucket", strconv.Itoa(i), &newModel); err != nil {
+			b.Error("Error on record update:", err)
+		}
+	}
+}
+
+func benchmarkUpdate(b *testing.B, database kvbase.Backend) {
+	for i := 0; i < b.N; i++ {
+		if err := database.Create("bucket", strconv.Itoa(i), &exampleModel); err != nil {
+			b.Error("Error on record creation:", err)
+		}
+	}
+
+	b.ResetTimer()
+	newModel := exampleModel
+	newModel.Name = "Updated John Smith"
+	for i := 0; i < b.N; i++ {
+		if err := database.Update("bucket", strconv.Itoa(i), &newModel); err != nil {
+			b.Error("Error on record update:", err)
+		}
 	}
 }

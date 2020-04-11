@@ -11,7 +11,6 @@ import (
 type BadgerBackend struct {
 	Backend
 	Connection *badger.DB
-	Driver	   string
 	Memory     bool
 	Source     string
 }
@@ -23,6 +22,7 @@ func NewBadgerDB(source string, memory bool) (Backend, error) {
 	}
 
 	opts := badger.DefaultOptions(source)
+	opts.BypassLockGuard = true
 	opts.Logger = nil
 	opts.SyncWrites = true
 
@@ -39,7 +39,6 @@ func NewBadgerDB(source string, memory bool) (Backend, error) {
 
 	database := BadgerBackend{
 		Connection: db,
-		Driver: 	"badgerdb",
 		Memory:     memory,
 		Source:     source,
 	}
@@ -85,6 +84,25 @@ func (database *BadgerBackend) Delete(bucket string, key string) error {
 
 	return db.Update(func(txn *badger.Txn) error {
 		return txn.Delete([]byte(bucket + "_" + key))
+	})
+}
+
+// Drop deletes a bucket (and all of its contents) from the backend
+func (database *BadgerBackend) Drop(bucket string) error {
+	db := database.Connection
+
+	return db.Update(func(txn *badger.Txn) error {
+		prefix := []byte(bucket + "_")
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchValues = false
+		it := txn.NewIterator(opts)
+		defer it.Close()
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			if err := txn.Delete(it.Item().Key()); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }
 
