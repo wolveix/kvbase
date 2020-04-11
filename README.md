@@ -11,7 +11,7 @@ Currently supported stores:
 
 ### Installing
 
-To start using KVBase, install Go and run `go get`:
+To start using kvbase, install Go and run `go get`:
 
 ```sh
 $ go get github.com/Wolveix/kvbase/..
@@ -124,7 +124,7 @@ s, _ := json.MarshalIndent(results, "", "\t")
 fmt.Print(string(s))
 ```
 
-`results` will now contain a `*map[string]interface{}` object. Note that the object doesn't support indexing, so `results["JohnSmith01"]` won't work; however, you can loop through the mapo to find specific keys.
+`results` will now contain a `*map[string]interface{}` object. Note that the object doesn't support indexing, so `results["JohnSmith01"]` won't work; however, you can loop through the map to find specific keys.
 
 ### Reading an entry
 
