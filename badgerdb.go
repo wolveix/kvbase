@@ -52,14 +52,13 @@ func (database *BadgerBackend) Count(bucket string) (int, error) {
 	counter := 0
 
 	return counter, db.View(func(txn *badger.Txn) error {
+		prefix := []byte(bucket + "_")
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchValues = false
 		it := txn.NewIterator(opts)
 		defer it.Close()
-		for it.Rewind(); it.Valid(); it.Next() {
-			if strings.HasPrefix(string(it.Item().Key()), bucket) {
-				counter++
-			}
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			counter++
 		}
 		return nil
 	})
@@ -113,15 +112,15 @@ func (database *BadgerBackend) Get(bucket string, model interface{}) (*map[strin
 
 	return &results, db.View(func(txn *badger.Txn) error {
 		prefix := []byte(bucket + "_")
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchValues = false
+		it := txn.NewIterator(opts)
 		defer it.Close()
-
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
+			key := strings.TrimPrefix(string(item.Key()), bucket+"_")
 
 			if err := item.Value(func(value []byte) error {
-				key := strings.Replace(string(item.Key()), bucket+"_", "", -1)
-
 				if err := json.Unmarshal(value, &model); err != nil {
 					return err
 				}

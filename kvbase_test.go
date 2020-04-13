@@ -1,7 +1,6 @@
 package kvbase_test
 
 import (
-	"fmt"
 	"github.com/Wolveix/kvbase"
 	"strconv"
 	"testing"
@@ -222,7 +221,6 @@ func benchmarkGet(b *testing.B, database kvbase.Backend) {
 
 func benchmarkRead(b *testing.B, database kvbase.Backend) {
 	for i := 0; i < b.N; i++ {
-		fmt.Println(i)
 		if err := database.Create("bucket", strconv.Itoa(i), &exampleModel); err != nil {
 			b.Error("Error on record creation:", err)
 		}

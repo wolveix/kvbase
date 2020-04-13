@@ -1,11 +1,15 @@
-# kvbase ![Go](https://github.com/Wolveix/kvbase/workflows/Go/badge.svg) [![Go Report Card](https://goreportcard.com/badge/github.com/Wolveix/kvbase)](https://goreportcard.com/report/github.com/Wolveix/kvbase) [![GoDoc](https://godoc.org/github.com/Wolveix/kvbase?status.svg)](https://pkg.go.dev/github.com/Wolveix/kvbase)
-A simple abstraction layer for key value stores.
+# kvbase [![build](https://img.shields.io/github/workflow/status/Wolveix/kvbase/Go?label=build)](https://github.com/Wolveix/kvbase/workflows/Go) [![report](https://goreportcard.com/badge/github.com/Wolveix/kvbase)](https://goreportcard.com/report/github.com/Wolveix/kvbase) [![coverage](https://img.shields.io/codecov/c/github/Wolveix/kvbase)](https://codecov.io/gh/Wolveix/kvbase) [![documentation](https://godoc.org/github.com/Wolveix/kvbase?status.svg)](https://pkg.go.dev/github.com/Wolveix/kvbase) [![license](https://img.shields.io/github/license/Wolveix/kvbase)](https://github.com/Wolveix/kvbase/blob/master/LICENSE) [![version](https://img.shields.io/github/v/tag/Wolveix/kvbase?label=version)](https://github.com/Wolveix/kvbase/releases/latest)
+
+A simple abstraction library for key value stores.
 
 Currently supported stores:
 - [BadgerDB](https://github.com/dgraph-io/badger)
+- [Bitcask](https://github.com/prologic/bitcask)
 - [BoltDB](https://github.com/boltdb/bolt)
 - [BboltDB](https://github.com/etcd-io/bbolt)
+- [Diskv](https://github.com/peterbourgon/diskv)
 - [Go-Cache](https://github.com/patrickmn/go-cache)
+- [LevelDB](https://github.com/syndtr/goleveldb)
 
 ## Getting Started
 
