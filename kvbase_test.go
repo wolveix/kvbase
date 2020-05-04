@@ -54,12 +54,12 @@ func testDelete(t *testing.T, database kvbase.Backend) {
 }
 
 func testDrop(t *testing.T, database kvbase.Backend) {
+	newModel := exampleModel
+	newModel.Name = "Updated John Smith"
+
 	if err := database.Create("bucket", "k0", &exampleModel); err != nil {
 		t.Fatal("Error on record creation:", err)
 	}
-
-	newModel := exampleModel
-	newModel.Name = "Updated John Smith"
 
 	if err := database.Create("bucket", "k1", &newModel); err != nil {
 		t.Fatal("Error on record creation:", err)
@@ -72,6 +72,10 @@ func testDrop(t *testing.T, database kvbase.Backend) {
 	if err := database.Read("bucket", "k0", &model{}); err == nil {
 		t.Fatal("Error expected for missing key.")
 	}
+
+	if err := database.Read("bucket", "k1", &model{}); err == nil {
+		t.Fatal("Error expected for missing key.")
+	}
 }
 
 func testGet(t *testing.T, database kvbase.Backend) {
@@ -79,12 +83,12 @@ func testGet(t *testing.T, database kvbase.Backend) {
 		"John Smith",
 	}
 
-	if err := database.Create("bucket", "keyOne", &kO); err != nil {
-		t.Fatal("Error on record creation:", err)
-	}
-
 	k1 := model{
 		"James Green",
+	}
+
+	if err := database.Create("bucket", "keyOne", &kO); err != nil {
+		t.Fatal("Error on record creation:", err)
 	}
 
 	if err := database.Create("bucket", "keyTwo", &k1); err != nil {
@@ -108,11 +112,11 @@ func testGet(t *testing.T, database kvbase.Backend) {
 }
 
 func testRead(t *testing.T, database kvbase.Backend) {
+	emptyModel := model{}
+
 	if err := database.Create("bucket", "key", &exampleModel); err != nil {
 		t.Fatal("Error on record creation:", err)
 	}
-
-	emptyModel := model{}
 
 	if err := database.Read("bucket", "key", &emptyModel); err != nil {
 		t.Fatal("Error on database read:", err)
@@ -124,6 +128,10 @@ func testRead(t *testing.T, database kvbase.Backend) {
 }
 
 func testUpdate(t *testing.T, database kvbase.Backend) {
+	emptyModel := model{}
+	newModel := exampleModel
+	newModel.Name = "Updated John Smith"
+
 	if err := database.Update("bucket", "key", &exampleModel); err == nil {
 		t.Fatal("Error expected for missing key.")
 	}
@@ -132,14 +140,9 @@ func testUpdate(t *testing.T, database kvbase.Backend) {
 		t.Fatal("Error on record creation:", err)
 	}
 
-	newModel := exampleModel
-	newModel.Name = "Updated John Smith"
-
 	if err := database.Update("bucket", "key", &newModel); err != nil {
 		t.Fatal("Error on record update:", err)
 	}
-
-	emptyModel := model{}
 
 	if err := database.Read("bucket", "key", &emptyModel); err != nil {
 		t.Fatal("Error on database read:", err)
@@ -236,6 +239,8 @@ func benchmarkRead(b *testing.B, database kvbase.Backend) {
 }
 
 func benchmarkUpdate(b *testing.B, database kvbase.Backend) {
+	newModel := exampleModel
+	newModel.Name = "Updated John Smith"
 	for i := 0; i < b.N; i++ {
 		if err := database.Create("bucket", strconv.Itoa(i), &exampleModel); err != nil {
 			b.Error("Error on record creation:", err)
@@ -243,8 +248,6 @@ func benchmarkUpdate(b *testing.B, database kvbase.Backend) {
 	}
 
 	b.ResetTimer()
-	newModel := exampleModel
-	newModel.Name = "Updated John Smith"
 	for i := 0; i < b.N; i++ {
 		if err := database.Update("bucket", strconv.Itoa(i), &newModel); err != nil {
 			b.Error("Error on record update:", err)

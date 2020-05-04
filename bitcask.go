@@ -72,23 +72,28 @@ func (database *BitcaskBackend) Delete(bucket string, key string) error {
 		return errors.New("key doesn't exist")
 	}
 
-	if err := db.Delete([]byte(bucket + "_" + key)); err != nil {
-		return err
-	}
-
-	return nil
+	return db.Delete([]byte(bucket + "_" + key))
 }
 
 // Drop deletes a bucket (and all of its contents) from the backend
 func (database *BitcaskBackend) Drop(bucket string) error {
 	db := database.Connection
 
-	return db.Scan([]byte(bucket+"_"), func(key []byte) error {
+	var keys [][]byte
+	if err := db.Scan([]byte(bucket+"_"), func(key []byte) error {
+		keys = append(keys, key)
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	for _, key := range keys {
 		if err := db.Delete(key); err != nil {
 			return err
 		}
-		return nil
-	})
+	}
+
+	return nil
 }
 
 // Get returns all records inside of the provided bucket
@@ -101,8 +106,13 @@ func (database *BitcaskBackend) Get(bucket string, model interface{}) (*map[stri
 		if err != nil {
 			return err
 		}
+
+		if err := json.Unmarshal(data, &model); err != nil {
+			return err
+		}
+
 		key := strings.TrimPrefix(string(rawKey), bucket+"_")
-		results[key] = data
+		results[key] = model
 		return nil
 	})
 }
