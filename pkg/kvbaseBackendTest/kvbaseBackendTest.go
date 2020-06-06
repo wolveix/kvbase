@@ -16,11 +16,11 @@ var (
 	exampleModel = model{
 		"John Smith",
 	}
-	err error
+	err   error
 	store kvbase.Backend
 )
 
-func reset (backend string, source string, memory bool) {
+func reset(backend string, source string, memory bool) {
 	if !memory {
 		if err = os.RemoveAll(source); err != nil {
 			panic(err)
