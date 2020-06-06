@@ -1,22 +1,34 @@
-package kvbase
+package kvbaseBackendBadgerDB
 
 import (
 	"encoding/json"
 	"errors"
+	"github.com/Wolveix/kvbase"
 	"github.com/dgraph-io/badger/v2"
 	"strings"
 )
 
-// BadgerBackend acts as a wrapper around a Backend interface
-type BadgerBackend struct {
-	Backend
+type backend struct {
+	kvbase.Backend
 	Connection *badger.DB
 	Memory     bool
 	Source     string
 }
 
-// NewBadgerDB initialises a new database using the BadgerDB driver
-func NewBadgerDB(source string, memory bool) (Backend, error) {
+func init() {
+	store := backend{
+		Connection: nil,
+		Memory:     false,
+		Source:     "data",
+	}
+
+	if err := kvbase.Register("badgerdb", &store); err != nil {
+		panic(err)
+	}
+}
+
+// Initialize initialises a new store using the BadgerDB backend
+func (store *backend) Initialize(source string, memory bool) error {
 	if source == "" {
 		source = "data"
 	}
@@ -34,21 +46,19 @@ func NewBadgerDB(source string, memory bool) (Backend, error) {
 
 	db, err := badger.Open(opts)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	database := BadgerBackend{
-		Connection: db,
-		Memory:     memory,
-		Source:     source,
-	}
+	store.Connection = db
+	store.Memory = memory
+	store.Source = source
 
-	return &database, nil
+	return nil
 }
 
 // Count returns the total number of records inside of the provided bucket
-func (database *BadgerBackend) Count(bucket string) (int, error) {
-	db := database.Connection
+func (store *backend) Count(bucket string) (int, error) {
+	db := store.Connection
 	counter := 0
 
 	return counter, db.View(func(txn *badger.Txn) error {
@@ -65,19 +75,19 @@ func (database *BadgerBackend) Count(bucket string) (int, error) {
 }
 
 // Create inserts a record into the backend
-func (database *BadgerBackend) Create(bucket string, key string, model interface{}) error {
-	if _, err := database.view(bucket, key); err == nil {
+func (store *backend) Create(bucket string, key string, model interface{}) error {
+	if _, err := store.view(bucket, key); err == nil {
 		return errors.New("key already exists")
 	}
 
-	return database.write(bucket, key, model)
+	return store.write(bucket, key, model)
 }
 
 // Delete removes a record from the backend
-func (database *BadgerBackend) Delete(bucket string, key string) error {
-	db := database.Connection
+func (store *backend) Delete(bucket string, key string) error {
+	db := store.Connection
 
-	if _, err := database.view(bucket, key); err != nil {
+	if _, err := store.view(bucket, key); err != nil {
 		return err
 	}
 
@@ -87,8 +97,8 @@ func (database *BadgerBackend) Delete(bucket string, key string) error {
 }
 
 // Drop deletes a bucket (and all of its contents) from the backend
-func (database *BadgerBackend) Drop(bucket string) error {
-	db := database.Connection
+func (store *backend) Drop(bucket string) error {
+	db := store.Connection
 
 	return db.Update(func(txn *badger.Txn) error {
 		prefix := []byte(bucket + "_")
@@ -106,8 +116,8 @@ func (database *BadgerBackend) Drop(bucket string) error {
 }
 
 // Get returns all records inside of the provided bucket
-func (database *BadgerBackend) Get(bucket string, model interface{}) (*map[string]interface{}, error) {
-	db := database.Connection
+func (store *backend) Get(bucket string, model interface{}) (*map[string]interface{}, error) {
+	db := store.Connection
 	results := make(map[string]interface{})
 
 	return &results, db.View(func(txn *badger.Txn) error {
@@ -137,8 +147,8 @@ func (database *BadgerBackend) Get(bucket string, model interface{}) (*map[strin
 }
 
 // Read returns a single struct from the provided bucket, using the provided key
-func (database *BadgerBackend) Read(bucket string, key string, model interface{}) error {
-	data, err := database.view(bucket, key)
+func (store *backend) Read(bucket string, key string, model interface{}) error {
+	data, err := store.view(bucket, key)
 	if err != nil {
 		return err
 	}
@@ -147,16 +157,16 @@ func (database *BadgerBackend) Read(bucket string, key string, model interface{}
 }
 
 // Update modifies an existing record from the backend, inside of the provided bucket, using the provided key
-func (database *BadgerBackend) Update(bucket string, key string, model interface{}) error {
-	if _, err := database.view(bucket, key); err != nil {
+func (store *backend) Update(bucket string, key string, model interface{}) error {
+	if _, err := store.view(bucket, key); err != nil {
 		return err
 	}
 
-	return database.write(bucket, key, model)
+	return store.write(bucket, key, model)
 }
 
-func (database *BadgerBackend) view(bucket string, key string) ([]byte, error) {
-	db := database.Connection
+func (store *backend) view(bucket string, key string) ([]byte, error) {
+	db := store.Connection
 	var data []byte
 
 	return data, db.View(func(txn *badger.Txn) error {
@@ -173,8 +183,8 @@ func (database *BadgerBackend) view(bucket string, key string) ([]byte, error) {
 	})
 }
 
-func (database *BadgerBackend) write(bucket string, key string, model interface{}) error {
-	db := database.Connection
+func (store *backend) write(bucket string, key string, model interface{}) error {
+	db := store.Connection
 
 	data, err := json.Marshal(&model)
 	if err != nil {

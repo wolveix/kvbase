@@ -1,42 +1,58 @@
-package kvbase
+package kvbaseBackendLevelDB
 
 import (
 	"encoding/json"
 	"errors"
+	"github.com/Wolveix/kvbase"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"strings"
 )
 
-// LevelBackend acts as a wrapper around a Backend interface
-type LevelBackend struct {
-	Backend
+type backend struct {
+	kvbase.Backend
 	Connection *leveldb.DB
+	Memory     bool
 	Source     string
 }
 
-// NewLevelDB initialises a new database using the LevelDB driver
-func NewLevelDB(source string) (Backend, error) {
+func init() {
+	store := backend{
+		Connection: nil,
+		Memory:     false,
+		Source:     "data",
+	}
+
+	if err := kvbase.Register("leveldb", &store); err != nil {
+		panic(err)
+	}
+}
+
+// Initialize initialises a new store using the LevelDB backend
+func (store *backend) Initialize(source string, memory bool) error {
+	if memory {
+		return errors.New("kvbase: leveldb doesn't support memory-only")
+	}
+
 	if source == "" {
 		source = "data"
 	}
 
 	db, err := leveldb.OpenFile(source, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	database := LevelBackend{
-		Connection: db,
-		Source:     source,
-	}
+	store.Connection = db
+	store.Memory = memory
+	store.Source = source
 
-	return &database, nil
+	return nil
 }
 
 // Count returns the total number of records inside of the provided bucket
-func (database *LevelBackend) Count(bucket string) (int, error) {
-	db := database.Connection
+func (store *backend) Count(bucket string) (int, error) {
+	db := store.Connection
 	counter := 0
 
 	iter := db.NewIterator(util.BytesPrefix([]byte(bucket+"_")), nil)
@@ -53,8 +69,8 @@ func (database *LevelBackend) Count(bucket string) (int, error) {
 }
 
 // Create inserts a record into the backend
-func (database *LevelBackend) Create(bucket string, key string, model interface{}) error {
-	db := database.Connection
+func (store *backend) Create(bucket string, key string, model interface{}) error {
+	db := store.Connection
 
 	if _, err := db.Get([]byte(bucket+"_"+key), nil); err == nil {
 		return errors.New("key already exists")
@@ -73,8 +89,8 @@ func (database *LevelBackend) Create(bucket string, key string, model interface{
 }
 
 // Delete removes a record from the backend
-func (database *LevelBackend) Delete(bucket string, key string) error {
-	db := database.Connection
+func (store *backend) Delete(bucket string, key string) error {
+	db := store.Connection
 
 	if _, err := db.Get([]byte(bucket+"_"+key), nil); err != nil {
 		return err
@@ -88,8 +104,8 @@ func (database *LevelBackend) Delete(bucket string, key string) error {
 }
 
 // Drop deletes a bucket (and all of its contents) from the backend
-func (database *LevelBackend) Drop(bucket string) error {
-	db := database.Connection
+func (store *backend) Drop(bucket string) error {
+	db := store.Connection
 
 	iter := db.NewIterator(util.BytesPrefix([]byte(bucket+"_")), nil)
 	for iter.Next() {
@@ -107,8 +123,8 @@ func (database *LevelBackend) Drop(bucket string) error {
 }
 
 // Get returns all records inside of the provided bucket
-func (database *LevelBackend) Get(bucket string, model interface{}) (*map[string]interface{}, error) {
-	db := database.Connection
+func (store *backend) Get(bucket string, model interface{}) (*map[string]interface{}, error) {
+	db := store.Connection
 	results := make(map[string]interface{})
 
 	iter := db.NewIterator(util.BytesPrefix([]byte(bucket+"_")), nil)
@@ -131,8 +147,8 @@ func (database *LevelBackend) Get(bucket string, model interface{}) (*map[string
 }
 
 // Read returns a single struct from the provided bucket, using the provided key
-func (database *LevelBackend) Read(bucket string, key string, model interface{}) error {
-	db := database.Connection
+func (store *backend) Read(bucket string, key string, model interface{}) error {
+	db := store.Connection
 
 	data, err := db.Get([]byte(bucket+"_"+key), nil)
 	if err != nil {
@@ -143,8 +159,8 @@ func (database *LevelBackend) Read(bucket string, key string, model interface{})
 }
 
 // Update modifies an existing record from the backend, inside of the provided bucket, using the provided key
-func (database *LevelBackend) Update(bucket string, key string, model interface{}) error {
-	db := database.Connection
+func (store *backend) Update(bucket string, key string, model interface{}) error {
+	db := store.Connection
 
 	if _, err := db.Get([]byte(bucket+"_"+key), nil); err != nil {
 		return err

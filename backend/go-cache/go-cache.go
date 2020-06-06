@@ -1,24 +1,36 @@
-package kvbase
+package kvbaseBackendGoCache
 
 import (
 	"encoding/json"
 	"errors"
+	"github.com/Wolveix/kvbase"
 	"github.com/patrickmn/go-cache"
 	"strings"
 	"sync"
 )
 
-// GoCacheBackend acts as a wrapper around a Backend interface
-type GoCacheBackend struct {
-	Backend
+type backend struct {
+	kvbase.Backend
 	Connection *cache.Cache
 	Memory     bool
 	Mux        sync.RWMutex
 	Source     string
 }
 
-// NewGoCache initialises a new database using the GoCache driver
-func NewGoCache(source string, memory bool) (Backend, error) {
+func init() {
+	store := backend{
+		Connection: nil,
+		Memory:     false,
+		Source:     "data",
+	}
+
+	if err := kvbase.Register("go-cache", &store); err != nil {
+		panic(err)
+	}
+}
+
+// Initialize initialises a new store using the Go-Cache backend
+func (store *backend) Initialize(source string, memory bool) error {
 	if source == "" {
 		source = "data"
 	}
@@ -29,22 +41,20 @@ func NewGoCache(source string, memory bool) (Backend, error) {
 		_ = db.LoadFile(source)
 	}
 
-	database := GoCacheBackend{
-		Connection: db,
-		Memory:     memory,
-		Source:     source,
+	store.Connection = db
+	store.Memory = memory
+	store.Source = source
+
+	if err := store.save(); err != nil {
+		return err
 	}
 
-	if err := database.save(); err != nil {
-		return nil, err
-	}
-
-	return &database, nil
+	return nil
 }
 
 // Count returns the total number of records inside of the provided bucket
-func (database *GoCacheBackend) Count(bucket string) (int, error) {
-	db := database.Connection
+func (store *backend) Count(bucket string) (int, error) {
+	db := store.Connection
 	counter := 0
 
 	data := db.Items()
@@ -59,8 +69,8 @@ func (database *GoCacheBackend) Count(bucket string) (int, error) {
 }
 
 // Create inserts a record into the backend
-func (database *GoCacheBackend) Create(bucket string, key string, model interface{}) error {
-	db := database.Connection
+func (store *backend) Create(bucket string, key string, model interface{}) error {
+	db := store.Connection
 
 	data, err := json.Marshal(&model)
 	if err != nil {
@@ -71,7 +81,7 @@ func (database *GoCacheBackend) Create(bucket string, key string, model interfac
 		return err
 	}
 
-	if err := database.save(); err != nil {
+	if err := store.save(); err != nil {
 		return err
 	}
 
@@ -79,8 +89,8 @@ func (database *GoCacheBackend) Create(bucket string, key string, model interfac
 }
 
 // Delete removes a record from the backend
-func (database *GoCacheBackend) Delete(bucket string, key string) error {
-	db := database.Connection
+func (store *backend) Delete(bucket string, key string) error {
+	db := store.Connection
 
 	_, found := db.Get(bucket + "_" + key)
 	if !found {
@@ -89,7 +99,7 @@ func (database *GoCacheBackend) Delete(bucket string, key string) error {
 
 	db.Delete(bucket + "_" + key)
 
-	if err := database.save(); err != nil {
+	if err := store.save(); err != nil {
 		return err
 	}
 
@@ -97,8 +107,8 @@ func (database *GoCacheBackend) Delete(bucket string, key string) error {
 }
 
 // Drop deletes a bucket (and all of its contents) from the backend
-func (database *GoCacheBackend) Drop(bucket string) error {
-	db := database.Connection
+func (store *backend) Drop(bucket string) error {
+	db := store.Connection
 
 	data := db.Items()
 
@@ -108,7 +118,7 @@ func (database *GoCacheBackend) Drop(bucket string) error {
 		}
 	}
 
-	if err := database.save(); err != nil {
+	if err := store.save(); err != nil {
 		return err
 	}
 
@@ -116,8 +126,8 @@ func (database *GoCacheBackend) Drop(bucket string) error {
 }
 
 // Get returns all records inside of the provided bucket
-func (database *GoCacheBackend) Get(bucket string, model interface{}) (*map[string]interface{}, error) {
-	db := database.Connection
+func (store *backend) Get(bucket string, model interface{}) (*map[string]interface{}, error) {
+	db := store.Connection
 	results := make(map[string]interface{})
 
 	data := db.Items()
@@ -136,8 +146,8 @@ func (database *GoCacheBackend) Get(bucket string, model interface{}) (*map[stri
 }
 
 // Read returns a single struct from the provided bucket, using the provided key
-func (database *GoCacheBackend) Read(bucket string, key string, model interface{}) error {
-	db := database.Connection
+func (store *backend) Read(bucket string, key string, model interface{}) error {
+	db := store.Connection
 
 	data, found := db.Get(bucket + "_" + key)
 	if !found {
@@ -148,8 +158,8 @@ func (database *GoCacheBackend) Read(bucket string, key string, model interface{
 }
 
 // Update modifies an existing record from the backend, inside of the provided bucket, using the provided key
-func (database *GoCacheBackend) Update(bucket string, key string, model interface{}) error {
-	db := database.Connection
+func (store *backend) Update(bucket string, key string, model interface{}) error {
+	db := store.Connection
 
 	data, err := json.Marshal(&model)
 	if err != nil {
@@ -160,20 +170,20 @@ func (database *GoCacheBackend) Update(bucket string, key string, model interfac
 		return err
 	}
 
-	if err := database.save(); err != nil {
+	if err := store.save(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (database *GoCacheBackend) save() error {
-	if !database.Memory {
-		database.Mux.RLock()
-		if err := database.Connection.SaveFile(database.Source); err != nil {
+func (store *backend) save() error {
+	if !store.Memory {
+		store.Mux.RLock()
+		if err := store.Connection.SaveFile(store.Source); err != nil {
 			return err
 		}
-		database.Mux.RUnlock()
+		store.Mux.RUnlock()
 	}
 
 	return nil

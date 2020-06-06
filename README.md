@@ -4,13 +4,13 @@
 A simple abstraction library for key value stores.
 
 Currently supported stores:
-- [BadgerDB](https://github.com/dgraph-io/badger)
+- [Badgerkv](https://github.com/dgraph-io/badger)
 - [Bitcask](https://github.com/prologic/bitcask)
-- [BoltDB](https://github.com/boltdb/bolt)
-- [BboltDB](https://github.com/etcd-io/bbolt)
+- [Boltkv](https://github.com/boltkv/bolt)
+- [Bboltkv](https://github.com/etcd-io/bbolt)
 - [Diskv](https://github.com/peterbourgon/diskv)
 - [Go-Cache](https://github.com/patrickmn/go-cache)
-- [LevelDB](https://github.com/syndtr/goleveldb)
+- [Levelkv](https://github.com/syndtr/golevelkv)
 
 ## Getting Started
 
@@ -22,23 +22,24 @@ To start using kvbase, install Go and run `go get`:
 $ go get github.com/Wolveix/kvbase/..
 ```
 
-This will retrieve the library. You can interact with each supported store in the exact same way, simply swap out the `New` initialisation.
+This will retrieve the library. You can interact with each supported store in the exact same way, simply swap out the specified backend when calling the `New` command.
 
 <hr>
 
 ### Opening a database
 
-All databases are stored within a `Backend` interface, and have the following functions available:
+All stores utilize the same `Backend` interface. The following functions are available for every backend:
 
 - `Count(bucket string) (int, error)`
 - `Create(bucket string, key string, model interface{}) error`
 - `Delete(bucket string, key string) error`
 - `Drop(bucket string) error`
 - `Get(bucket string, model interface{}) (*map[string]interface{}, error)`
+- `Initialize(backend string, source string, memory bool) error`
 - `Read(bucket string, key string, model interface{}) error`
 - `Update(bucket string, key string, model interface{}) error`
 
-To open a database instance, call the package with `New` followed by the type. E.g: `kvbase.NewBadgerDB("data", false)`:
+Stores can be opened similarly to how `database/sql` handles databases. Import `Wolveix/kvbase` as well as the backend you want to use `Wolveix/kvbase/backend/badgerkv`, then call `kvbase.New("badgerkv", "data", false)`:
 
 ```go
 package main
@@ -47,10 +48,11 @@ import (
 	"log"
 
 	"github.com/Wolveix/kvbase"
+	_ "github.com/Wolveix/kvbase/backend/badgerdb"
 )
 
 func main() {
-    db, err := kvbase.NewBadgerDB("data", false)
+    kv, err := kvbase.New("badgerdb", "data", false)
     if err != nil {
         log.Fatal(err)
     }
@@ -66,7 +68,7 @@ These functions expect a source to be specified. Some drivers utilize a file, ot
 The `Count()` function expects a bucket (as a `string`),:
 
 ```go
-counter, err := db.Count("users")
+counter, err := kv.Count("users")
 if err != nil {
     log.Fatal(err)
 }
@@ -89,7 +91,7 @@ user := User{
     "JohnSmith123",
 }
 
-if err := db.Create("users", user.Username, &user); err != nil {
+if err := kv.Create("users", user.Username, &user); err != nil {
     log.Fatal(err)
 }
 ```
@@ -100,7 +102,7 @@ If the key already exists, this will **fail**.
 The `Delete()` function expects a bucket (as a `string`), a key (as a `string`):
 
 ```go
-if err := db.Delete("users", "JohnSmith01"); err != nil {
+if err := kv.Delete("users", "JohnSmith01"); err != nil {
     log.Fatal(err)
 }
 ```
@@ -110,7 +112,7 @@ if err := db.Delete("users", "JohnSmith01"); err != nil {
 The `Drop()` function expects a bucket (as a `string`):
 
 ```go
-if err := db.Drop("users"); err != nil {
+if err := kv.Drop("users"); err != nil {
     log.Fatal(err)
 }
 ```
@@ -120,7 +122,7 @@ if err := db.Drop("users"); err != nil {
 The `Get()` function expects a bucket (as a `string`), and a struct to unmarshal your data into (as an `interface{}`):
 
 ```go
-results, err := db.Get("users", User{})
+results, err := kv.Get("users", User{})
 if err != nil {
     log.Fatal(err)
 }
@@ -138,7 +140,7 @@ The `Read()` function expects a bucket (as a `string`), a key (as a `string`) an
 ```go
 user := User{}
 
-if err := db.Read("users", "JohnSmith01", &user); err != nil {
+if err := kv.Read("users", "JohnSmith01", &user); err != nil {
     log.Fatal(err)
 }
 
@@ -155,7 +157,7 @@ user := User{
     "JohnSmith123",
 }
 
-if err := db.Update("users", user.Username, &user); err != nil {
+if err := kv.Update("users", user.Username, &user); err != nil {
     log.Fatal(err)
 }
 ```

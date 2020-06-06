@@ -1,44 +1,60 @@
-package kvbase
+package kvbaseBackendBboltDB
 
 import (
 	"encoding/json"
 	"errors"
+	"github.com/Wolveix/kvbase"
 	"go.etcd.io/bbolt"
 	"time"
 )
 
-// BboltBackend acts as a wrapper around a Backend interface
-type BboltBackend struct {
-	Backend
+type backend struct {
+	kvbase.Backend
 	Connection *bbolt.DB
+	Memory     bool
 	Source     string
 }
 
-// NewBboltDB initialises a new database using the BboltDB driver
-func NewBboltDB(source string) (Backend, error) {
+func init() {
+	store := backend{
+		Connection: nil,
+		Memory:     false,
+		Source:     "data.db",
+	}
+
+	if err := kvbase.Register("bboltdb", &store); err != nil {
+		panic(err)
+	}
+}
+
+// Initialize initialises a new store using the BboltDB backend
+func (store *backend) Initialize(source string, memory bool) error {
+	if memory {
+		return errors.New("kvbase: bboltdb doesn't support memory-only")
+	}
+
 	if source == "" {
 		source = "data.db"
 	}
 
 	db, err := bbolt.Open(source, 0600, &bbolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	database := BboltBackend{
-		Connection: db,
-		Source:     source,
-	}
+	store.Connection = db
+	store.Memory = memory
+	store.Source = source
 
-	return &database, nil
+	return nil
 }
 
 // Count returns the total number of records inside of the provided bucket
-func (database *BboltBackend) Count(bucket string) (int, error) {
-	db := database.Connection
+func (store *backend) Count(bucket string) (int, error) {
+	db := store.Connection
 	counter := 0
 
-	if err := database.checkBucket(bucket); err != nil {
+	if err := store.checkBucket(bucket); err != nil {
 		return 0, err
 	}
 
@@ -52,19 +68,19 @@ func (database *BboltBackend) Count(bucket string) (int, error) {
 }
 
 // Create inserts a record into the backend
-func (database *BboltBackend) Create(bucket string, key string, model interface{}) error {
-	if _, err := database.view(bucket, key); err == nil {
+func (store *backend) Create(bucket string, key string, model interface{}) error {
+	if _, err := store.view(bucket, key); err == nil {
 		return errors.New("key already exists")
 	}
 
-	return database.write(bucket, key, model)
+	return store.write(bucket, key, model)
 }
 
 // Delete removes a record from the backend
-func (database *BboltBackend) Delete(bucket string, key string) error {
-	db := database.Connection
+func (store *backend) Delete(bucket string, key string) error {
+	db := store.Connection
 
-	if _, err := database.view(bucket, key); err != nil {
+	if _, err := store.view(bucket, key); err != nil {
 		return err
 	}
 
@@ -76,8 +92,8 @@ func (database *BboltBackend) Delete(bucket string, key string) error {
 }
 
 // Drop deletes a bucket (and all of its contents) from the backend
-func (database *BboltBackend) Drop(bucket string) error {
-	db := database.Connection
+func (store *backend) Drop(bucket string) error {
+	db := store.Connection
 
 	return db.Update(func(tx *bbolt.Tx) error {
 		return tx.DeleteBucket([]byte(bucket))
@@ -85,11 +101,11 @@ func (database *BboltBackend) Drop(bucket string) error {
 }
 
 // Get returns all records inside of the provided bucket
-func (database *BboltBackend) Get(bucket string, model interface{}) (*map[string]interface{}, error) {
-	db := database.Connection
+func (store *backend) Get(bucket string, model interface{}) (*map[string]interface{}, error) {
+	db := store.Connection
 	results := make(map[string]interface{})
 
-	err := database.checkBucket(bucket)
+	err := store.checkBucket(bucket)
 	if err != nil {
 		return nil, err
 	}
@@ -110,8 +126,8 @@ func (database *BboltBackend) Get(bucket string, model interface{}) (*map[string
 }
 
 // Read returns a single struct from the provided bucket, using the provided key
-func (database *BboltBackend) Read(bucket string, key string, model interface{}) error {
-	data, err := database.view(bucket, key)
+func (store *backend) Read(bucket string, key string, model interface{}) error {
+	data, err := store.view(bucket, key)
 	if err != nil {
 		return err
 	}
@@ -120,16 +136,16 @@ func (database *BboltBackend) Read(bucket string, key string, model interface{})
 }
 
 // Update modifies an existing record from the backend, inside of the provided bucket, using the provided key
-func (database *BboltBackend) Update(bucket string, key string, model interface{}) error {
-	if _, err := database.view(bucket, key); err != nil {
+func (store *backend) Update(bucket string, key string, model interface{}) error {
+	if _, err := store.view(bucket, key); err != nil {
 		return err
 	}
 
-	return database.write(bucket, key, model)
+	return store.write(bucket, key, model)
 }
 
-func (database *BboltBackend) checkBucket(bucket string) error {
-	db := database.Connection
+func (store *backend) checkBucket(bucket string) error {
+	db := store.Connection
 
 	return db.Update(func(tx *bbolt.Tx) error {
 		if _, err := tx.CreateBucketIfNotExists([]byte(bucket)); err != nil {
@@ -140,11 +156,11 @@ func (database *BboltBackend) checkBucket(bucket string) error {
 	})
 }
 
-func (database *BboltBackend) view(bucket string, key string) ([]byte, error) {
-	db := database.Connection
+func (store *backend) view(bucket string, key string) ([]byte, error) {
+	db := store.Connection
 	var data []byte
 
-	if err := database.checkBucket(bucket); err != nil {
+	if err := store.checkBucket(bucket); err != nil {
 		return nil, err
 	}
 
@@ -161,15 +177,15 @@ func (database *BboltBackend) view(bucket string, key string) ([]byte, error) {
 	})
 }
 
-func (database *BboltBackend) write(bucket string, key string, model interface{}) error {
-	db := database.Connection
+func (store *backend) write(bucket string, key string, model interface{}) error {
+	db := store.Connection
 
 	data, err := json.Marshal(&model)
 	if err != nil {
 		return err
 	}
 
-	if err = database.checkBucket(bucket); err != nil {
+	if err = store.checkBucket(bucket); err != nil {
 		return err
 	}
 

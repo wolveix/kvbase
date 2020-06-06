@@ -1,41 +1,57 @@
-package kvbase
+package kvbaseBackendBitcask
 
 import (
 	"encoding/json"
 	"errors"
+	"github.com/Wolveix/kvbase"
 	"github.com/prologic/bitcask"
 	"strings"
 )
 
-// BitcaskBackend acts as a wrapper around a Backend interface
-type BitcaskBackend struct {
-	Backend
+type backend struct {
+	kvbase.Backend
 	Connection *bitcask.Bitcask
+	Memory     bool
 	Source     string
 }
 
-// NewBitcaskDB initialises a new database using the BitcaskDB driver
-func NewBitcaskDB(source string) (Backend, error) {
+func init() {
+	store := backend{
+		Connection: nil,
+		Memory:     false,
+		Source:     "data",
+	}
+
+	if err := kvbase.Register("bitcask", &store); err != nil {
+		panic(err)
+	}
+}
+
+// Initialize initialises a new store using the Bitcask backend
+func (store *backend) Initialize(source string, memory bool) error {
+	if memory {
+		return errors.New("kvbase: bitcask doesn't support memory-only")
+	}
+
 	if source == "" {
 		source = "data"
 	}
 
 	db, err := bitcask.Open(source)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	database := BitcaskBackend{
-		Connection: db,
-		Source:     source,
-	}
+	store.Connection = db
+	store.Memory = memory
+	store.Source = source
 
-	return &database, nil
+	return nil
 }
 
 // Count returns the total number of records inside of the provided bucket
-func (database *BitcaskBackend) Count(bucket string) (int, error) {
-	db := database.Connection
+func (store *backend) Count(bucket string) (int, error) {
+	db := store.Connection
 	counter := 0
 
 	return counter, db.Scan([]byte(bucket+"_"), func(key []byte) error {
@@ -45,8 +61,8 @@ func (database *BitcaskBackend) Count(bucket string) (int, error) {
 }
 
 // Create inserts a record into the backend
-func (database *BitcaskBackend) Create(bucket string, key string, model interface{}) error {
-	db := database.Connection
+func (store *backend) Create(bucket string, key string, model interface{}) error {
+	db := store.Connection
 
 	if db.Has([]byte(bucket + "_" + key)) {
 		return errors.New("key already exists")
@@ -65,8 +81,8 @@ func (database *BitcaskBackend) Create(bucket string, key string, model interfac
 }
 
 // Delete removes a record from the backend
-func (database *BitcaskBackend) Delete(bucket string, key string) error {
-	db := database.Connection
+func (store *backend) Delete(bucket string, key string) error {
+	db := store.Connection
 
 	if !db.Has([]byte(bucket + "_" + key)) {
 		return errors.New("key doesn't exist")
@@ -76,8 +92,8 @@ func (database *BitcaskBackend) Delete(bucket string, key string) error {
 }
 
 // Drop deletes a bucket (and all of its contents) from the backend
-func (database *BitcaskBackend) Drop(bucket string) error {
-	db := database.Connection
+func (store *backend) Drop(bucket string) error {
+	db := store.Connection
 
 	var keys [][]byte
 	if err := db.Scan([]byte(bucket+"_"), func(key []byte) error {
@@ -97,8 +113,8 @@ func (database *BitcaskBackend) Drop(bucket string) error {
 }
 
 // Get returns all records inside of the provided bucket
-func (database *BitcaskBackend) Get(bucket string, model interface{}) (*map[string]interface{}, error) {
-	db := database.Connection
+func (store *backend) Get(bucket string, model interface{}) (*map[string]interface{}, error) {
+	db := store.Connection
 	results := make(map[string]interface{})
 
 	return &results, db.Scan([]byte(bucket+"_"), func(rawKey []byte) error {
@@ -118,8 +134,8 @@ func (database *BitcaskBackend) Get(bucket string, model interface{}) (*map[stri
 }
 
 // Read returns a single struct from the provided bucket, using the provided key
-func (database *BitcaskBackend) Read(bucket string, key string, model interface{}) error {
-	db := database.Connection
+func (store *backend) Read(bucket string, key string, model interface{}) error {
+	db := store.Connection
 
 	data, err := db.Get([]byte(bucket + "_" + key))
 	if err != nil {
@@ -130,8 +146,8 @@ func (database *BitcaskBackend) Read(bucket string, key string, model interface{
 }
 
 // Update modifies an existing record from the backend, inside of the provided bucket, using the provided key
-func (database *BitcaskBackend) Update(bucket string, key string, model interface{}) error {
-	db := database.Connection
+func (store *backend) Update(bucket string, key string, model interface{}) error {
+	db := store.Connection
 
 	if !db.Has([]byte(bucket + "_" + key)) {
 		return errors.New("key doesn't exist")

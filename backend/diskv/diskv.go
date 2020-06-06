@@ -1,21 +1,38 @@
-package kvbase
+package kvbaseBackendDiskv
 
 import (
 	"encoding/json"
 	"errors"
+	"github.com/Wolveix/kvbase"
 	"github.com/peterbourgon/diskv"
 	"strings"
 )
 
-// DiskvBackend acts as a wrapper around a Backend interface
-type DiskvBackend struct {
-	Backend
+type backend struct {
+	kvbase.Backend
 	Connection *diskv.Diskv
+	Memory     bool
 	Source     string
 }
 
-// NewDiskvDB initialises a new database using the DiskvDB driver
-func NewDiskvDB(source string) (Backend, error) {
+func init() {
+	store := backend{
+		Connection: nil,
+		Memory:     false,
+		Source:     "data",
+	}
+
+	if err := kvbase.Register("diskv", &store); err != nil {
+		panic(err)
+	}
+}
+
+// Initialize initialises a new store using the Diskv backend
+func (store *backend) Initialize(source string, memory bool) error {
+	if memory {
+		return errors.New("kvbase: diskv doesn't support memory-only")
+	}
+
 	if source == "" {
 		source = "data"
 	}
@@ -26,17 +43,16 @@ func NewDiskvDB(source string) (Backend, error) {
 		CacheSizeMax: 1024 * 1024,
 	})
 
-	database := DiskvBackend{
-		Connection: db,
-		Source:     source,
-	}
+	store.Connection = db
+	store.Memory = memory
+	store.Source = source
 
-	return &database, nil
+	return nil
 }
 
 // Count returns the total number of records inside of the provided bucket
-func (database *DiskvBackend) Count(bucket string) (int, error) {
-	db := database.Connection
+func (store *backend) Count(bucket string) (int, error) {
+	db := store.Connection
 	counter := 0
 
 	keys := db.KeysPrefix(bucket+"_", nil)
@@ -48,8 +64,8 @@ func (database *DiskvBackend) Count(bucket string) (int, error) {
 }
 
 // Create inserts a record into the backend
-func (database *DiskvBackend) Create(bucket string, key string, model interface{}) error {
-	db := database.Connection
+func (store *backend) Create(bucket string, key string, model interface{}) error {
+	db := store.Connection
 
 	if db.Has(bucket + "_" + key) {
 		return errors.New("key already exists")
@@ -68,8 +84,8 @@ func (database *DiskvBackend) Create(bucket string, key string, model interface{
 }
 
 // Delete removes a record from the backend
-func (database *DiskvBackend) Delete(bucket string, key string) error {
-	db := database.Connection
+func (store *backend) Delete(bucket string, key string) error {
+	db := store.Connection
 
 	if !db.Has(bucket + "_" + key) {
 		return errors.New("key doesn't exist")
@@ -83,8 +99,8 @@ func (database *DiskvBackend) Delete(bucket string, key string) error {
 }
 
 // Drop deletes a bucket (and all of its contents) from the backend
-func (database *DiskvBackend) Drop(bucket string) error {
-	db := database.Connection
+func (store *backend) Drop(bucket string) error {
+	db := store.Connection
 
 	keys := db.KeysPrefix(bucket+"_", nil)
 	for key := range keys {
@@ -97,8 +113,8 @@ func (database *DiskvBackend) Drop(bucket string) error {
 }
 
 // Get returns all records inside of the provided bucket
-func (database *DiskvBackend) Get(bucket string, model interface{}) (*map[string]interface{}, error) {
-	db := database.Connection
+func (store *backend) Get(bucket string, model interface{}) (*map[string]interface{}, error) {
+	db := store.Connection
 	results := make(map[string]interface{})
 
 	keys := db.KeysPrefix(bucket+"_", nil)
@@ -121,8 +137,8 @@ func (database *DiskvBackend) Get(bucket string, model interface{}) (*map[string
 }
 
 // Read returns a single struct from the provided bucket, using the provided key
-func (database *DiskvBackend) Read(bucket string, key string, model interface{}) error {
-	db := database.Connection
+func (store *backend) Read(bucket string, key string, model interface{}) error {
+	db := store.Connection
 
 	data, err := db.Read(bucket + "_" + key)
 	if err != nil {
@@ -133,8 +149,8 @@ func (database *DiskvBackend) Read(bucket string, key string, model interface{})
 }
 
 // Update modifies an existing record from the backend, inside of the provided bucket, using the provided key
-func (database *DiskvBackend) Update(bucket string, key string, model interface{}) error {
-	db := database.Connection
+func (store *backend) Update(bucket string, key string, model interface{}) error {
+	db := store.Connection
 
 	if !db.Has(bucket + "_" + key) {
 		return errors.New("key doesn't exist")
