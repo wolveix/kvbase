@@ -4,13 +4,13 @@
 A simple abstraction library for key value stores.
 
 Currently supported stores:
-- [Badgerkv](https://github.com/dgraph-io/badger)
+- [BadgerDB](https://github.com/dgraph-io/badger)
 - [Bitcask](https://github.com/prologic/bitcask)
-- [Boltkv](https://github.com/boltkv/bolt)
-- [Bboltkv](https://github.com/etcd-io/bbolt)
+- [BoltDB](https://github.com/boltdb/bolt)
+- [BboltDB](https://github.com/etcd-io/bbolt)
 - [Diskv](https://github.com/peterbourgon/diskv)
 - [Go-Cache](https://github.com/patrickmn/go-cache)
-- [Levelkv](https://github.com/syndtr/golevelkv)
+- [LevelDB](https://github.com/syndtr/goleveldb)
 
 ## Getting Started
 
@@ -39,7 +39,7 @@ All stores utilize the same `Backend` interface. The following functions are ava
 - `Read(bucket string, key string, model interface{}) error`
 - `Update(bucket string, key string, model interface{}) error`
 
-Stores can be opened similarly to how `database/sql` handles databases. Import `Wolveix/kvbase` as well as the backend you want to use `Wolveix/kvbase/backend/badgerkv`, then call `kvbase.New("badgerkv", "data", false)`:
+Stores can be opened similarly to how `database/sql` handles databases. Import `Wolveix/kvbase` as well as the backend you want to use `Wolveix/kvbase/backend/badgerkb`, then call `kvbase.New("badgerdb", "data", false)`:
 
 ```go
 package main
