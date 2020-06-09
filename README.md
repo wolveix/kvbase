@@ -39,7 +39,7 @@ All stores utilize the same `Backend` interface. The following functions are ava
 - `Read(bucket string, key string, model interface{}) error`
 - `Update(bucket string, key string, model interface{}) error`
 
-Stores can be opened similarly to how `database/sql` handles databases. Import `Wolveix/kvbase` as well as the backend you want to use `Wolveix/kvbase/backend/badgerkb`, then call `kvbase.New("badgerdb", "data", false)`:
+Stores can be opened similarly to how `database/sql` handles databases. Import `Wolveix/kvbase` as well as the backend you want to use `Wolveix/kvbase/backend/badgerdb`, then call `kvbase.New("badgerdb", "data", false)`:
 
 ```go
 package main
