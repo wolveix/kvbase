@@ -1,11 +1,12 @@
 package kvbaseBackendTest
 
 import (
-	"github.com/Wolveix/kvbase"
-	_ "github.com/Wolveix/kvbase/backend/badgerdb"
 	"os"
 	"strconv"
 	"testing"
+
+	"github.com/Wolveix/kvbase"
+	_ "github.com/Wolveix/kvbase/backend/badgerdb"
 )
 
 type model struct {
@@ -20,7 +21,7 @@ var (
 	store kvbase.Backend
 )
 
-func reset(backend string, source string, memory bool) {
+func reset(backend, source string, memory bool) {
 	if !memory {
 		if err = os.RemoveAll(source); err != nil {
 			panic(err)
@@ -32,7 +33,7 @@ func reset(backend string, source string, memory bool) {
 	}
 }
 
-func RunTests(t *testing.T, backend string, source string, memory bool) {
+func RunTests(t *testing.T, backend, source string, memory bool) {
 	t.Run(backend+"_Count", func(t *testing.T) {
 		reset(backend, source, memory)
 		testCount(t)
@@ -75,7 +76,7 @@ func RunTests(t *testing.T, backend string, source string, memory bool) {
 	}
 }
 
-func RunBenches(b *testing.B, backend string, source string, memory bool) {
+func RunBenches(b *testing.B, backend, source string, memory bool) {
 	b.Run(backend+"_Count", func(b *testing.B) {
 		reset(backend, source, memory)
 		benchmarkCount(b)

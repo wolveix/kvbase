@@ -3,10 +3,11 @@ package kvbaseBackendLevelDB
 import (
 	"encoding/json"
 	"errors"
+	"strings"
+
 	"github.com/Wolveix/kvbase"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"strings"
 )
 
 type backend struct {
@@ -69,7 +70,7 @@ func (store *backend) Count(bucket string) (int, error) {
 }
 
 // Create inserts a record into the backend
-func (store *backend) Create(bucket string, key string, model interface{}) error {
+func (store *backend) Create(bucket, key string, model interface{}) error {
 	db := store.Connection
 
 	if _, err := db.Get([]byte(bucket+"_"+key), nil); err == nil {
@@ -89,7 +90,7 @@ func (store *backend) Create(bucket string, key string, model interface{}) error
 }
 
 // Delete removes a record from the backend
-func (store *backend) Delete(bucket string, key string) error {
+func (store *backend) Delete(bucket, key string) error {
 	db := store.Connection
 
 	if _, err := db.Get([]byte(bucket+"_"+key), nil); err != nil {
@@ -147,7 +148,7 @@ func (store *backend) Get(bucket string, model interface{}) (*map[string]interfa
 }
 
 // Read returns a single struct from the provided bucket, using the provided key
-func (store *backend) Read(bucket string, key string, model interface{}) error {
+func (store *backend) Read(bucket, key string, model interface{}) error {
 	db := store.Connection
 
 	data, err := db.Get([]byte(bucket+"_"+key), nil)
@@ -159,7 +160,7 @@ func (store *backend) Read(bucket string, key string, model interface{}) error {
 }
 
 // Update modifies an existing record from the backend, inside of the provided bucket, using the provided key
-func (store *backend) Update(bucket string, key string, model interface{}) error {
+func (store *backend) Update(bucket, key string, model interface{}) error {
 	db := store.Connection
 
 	if _, err := db.Get([]byte(bucket+"_"+key), nil); err != nil {

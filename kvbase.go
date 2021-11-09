@@ -32,7 +32,7 @@ func Backends() []string {
 	return list
 }
 
-func New(backend string, source string, memory bool) (Backend, error) {
+func New(backend, source string, memory bool) (Backend, error) {
 	store := backends[backend]
 
 	if store == nil {
